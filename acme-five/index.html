@@ -6,6 +6,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"></script>
 		<script src='https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.1/react-router-dom.js'></script>
 	</head>
+	
 	<style>
 		body {
 			font-family: Verdana;
@@ -21,7 +22,13 @@
 			color: white;
 			padding: 0.5rem;
 		}
+
+  	li {
+    list-style-type: none;
+		margin: 2rem;
+  	}
 	</style>
+	
 	<body>
 		<div id="root"></div>
 		<script type='text/babel'>
@@ -29,14 +36,57 @@
 			const { Component } = React
 			const { HashRouter, Route, NavLink, Switch, Redirect } = ReactRouterDOM
 			const API = "https://acme-users-api-rev.herokuapp.com/api"
+			const n = 5
+
+			const priceLessThanN = (products) => {
+				return (products.filter(product => product.suggestedPrice < n))
+			}
+
+			const priceMoreThanN = (products) => {
+				return (products.filter(product => product.suggestedPrice >= n))
+			}
 
 			const Nav = ({ products }) => {
-				const n = 5
 				return (
 					<nav>
-						<NavLink to="/under">Under ${n} ({(products.filter(product => product.suggestedPrice < n)).length})</NavLink>
-						<NavLink to="/over">{n} and Over ({(products.filter(product => product.suggestedPrice >= n)).length})</NavLink>
+						<NavLink to="/under">Under ${n} ({ priceLessThanN(products).length })</NavLink>
+						<NavLink to="/over">{n} and Over ({ priceMoreThanN(products).length })</NavLink>
 					</nav>
+				)
+			}
+
+			const Lower = ({ props, products }) => {
+				console.log(props)
+				return (
+					<div>
+						<ul>
+							{priceLessThanN(products).map((product, idx) => {
+								return (
+									<li key={product.id}>
+										<div>{product.name}</div>
+										<div>{product.suggestedPrice}</div>
+									</li>
+								)
+							})}
+						</ul>
+					</div>
+				)
+			}
+
+			const Higher = ({ products }) => {
+				return (
+					<div>
+						<ul>
+							{priceMoreThanN(products).map((product, idx) => {
+								return (
+									<li key={product.id}>
+										<div>{product.name}</div>
+										<div>{product.suggestedPrice}</div>
+									</li>
+								)
+							})}
+						</ul>
+					</div>
 				)
 			}
 
@@ -63,6 +113,10 @@
 						<HashRouter>
 							<h1>Acme 5 - Over / Under</h1>
 							<Route render={ () => <Nav products = {products} /> } />
+							<Switch>
+								<Route path="/under" render={ (props) => <Lower props={props} products={products} />} />
+								<Route path="/over" render={ () => <Higher products={products} />} />
+							</Switch>
 						</HashRouter>
 					)
 				}
