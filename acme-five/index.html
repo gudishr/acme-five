@@ -25,8 +25,13 @@
 
   	li {
     list-style-type: none;
-		margin: 2rem;
   	}
+
+		hr {
+			margin-top: 1rem;
+			margin-bottom: 1rem
+		}
+
 	</style>
 	
 	<body>
@@ -34,60 +39,63 @@
 		<script type='text/babel'>
 			const { render } = ReactDOM
 			const { Component } = React
-			const { HashRouter, Route, NavLink, Switch, Redirect } = ReactRouterDOM
+			const { HashRouter, Route, NavLink, Switch, Redirect, Link } = ReactRouterDOM
 			const API = "https://acme-users-api-rev.herokuapp.com/api"
-			const n = 5
 
-			const priceLessThanN = (products) => {
-				return (products.filter(product => product.suggestedPrice < n))
+			const underFive = (products) => {
+				return (products.filter(product => product.suggestedPrice < 5))
 			}
 
-			const priceMoreThanN = (products) => {
-				return (products.filter(product => product.suggestedPrice >= n))
+			const fiveAndOver = (products) => {
+				return (products.filter(product => product.suggestedPrice >= 5))
 			}
 
 			const Nav = ({ products }) => {
 				return (
 					<nav>
-						<NavLink to="/under">Under ${n} ({ priceLessThanN(products).length })</NavLink>
-						<NavLink to="/over">{n} and Over ({ priceMoreThanN(products).length })</NavLink>
+						<NavLink to="/products/underFive">Under 5 ({ underFive(products).length })</NavLink>
+						<NavLink to="/products/fiveAndOver">5 and Over ({ fiveAndOver(products).length })</NavLink>
 					</nav>
 				)
 			}
 
-			const Lower = ({ props, products }) => {
-				console.log(props)
+			const Products = ({ match, products, offerings, companies }) => {
+				let arr = []
+				const condition = match.params.condition
+				condition === 'underFive' ? arr = underFive(products) : arr = fiveAndOver(products)
 				return (
 					<div>
 						<ul>
-							{priceLessThanN(products).map((product, idx) => {
+							{arr.map((product, idx) => {
 								return (
 									<li key={product.id}>
-										<div>{product.name}</div>
-										<div>{product.suggestedPrice}</div>
+											<Link to={`/products/${condition}/${product.id}`}>{product.name}</Link>
+											<div>{product.suggestedPrice.toFixed(2)}</div>
+											<hr/>
 									</li>
 								)
 							})}
+							<Route path="/products/:condition/:id" render={ (props) => <Offerings id={props.match.params.id} offerings={ offerings } companies={ companies } /> }/>
 						</ul>
 					</div>
 				)
 			}
 
-			const Higher = ({ products }) => {
+			const Offerings = ({ id, offerings, companies }) => {
+				const offers = offerings.filter(offering => id === offering.productId)
 				return (
-					<div>
-						<ul>
-							{priceMoreThanN(products).map((product, idx) => {
-								return (
-									<li key={product.id}>
-										<div>{product.name}</div>
-										<div>{product.suggestedPrice}</div>
-									</li>
-								)
-							})}
-						</ul>
-					</div>
-				)
+					<ul>
+					{offers.map(offer => {
+						return (
+							<li key={offer.id}>
+									<div>Offered At {offer.price.toFixed(2)}</div>
+									<div>by {(companies.find(company => company.id === offer.companyId)).name}</div>
+									<hr/>
+							</li>
+						)
+					})}
+					</ul>
+					)
 			}
 
 			class App extends Component {
@@ -101,21 +109,18 @@
 				}
 
 				async componentDidMount() {
-					const products = (await axios.get(`${API}/products`)).data
-					const companies = (await axios.get(`${API}/companies`)).data
-					const offerings = (await axios.get(`${API}/offerings`)).data
+					const [ products, companies, offerings ] = [ (await axios.get(`${API}/products`)).data, (await axios.get(`${API}/companies`)).data, (await axios.get(`${API}/offerings`)).data ]
 					this.setState({ products, companies, offerings })
 				}
 
 				render() {
-					const { products } = this.state
+					const { products, offerings, companies } = this.state
 					return (
 						<HashRouter>
 							<h1>Acme 5 - Over / Under</h1>
 							<Route render={ () => <Nav products = {products} /> } />
 							<Switch>
-								<Route path="/under" render={ (props) => <Lower props={props} products={products} />} />
-								<Route path="/over" render={ () => <Higher products={products} />} />
+								<Route path="/products/:condition(underFive|fiveAndOver)" render={ (props) => <Products match={ props.match } products={ products } offerings={ offerings } companies={ companies } /> } />
 							</Switch>
 						</HashRouter>
 					)
